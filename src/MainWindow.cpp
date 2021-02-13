@@ -1,20 +1,48 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 #include <QMessageBox>
+#include <QCloseEvent>
 //=======================================================================
-MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+MainWindow::MainWindow(Mode mode, QWidget* parent)
+    : QMainWindow(parent),
+    ui(new Ui::MainWindow),
+    mode{mode}
 {
     ui->setupUi(this);
-
+    setWindowTitle("Крестики-Нолики");
     connect(ui->pushButtonX, SIGNAL(clicked()),
             this, SLOT(pushButtonX_clicked())
             );
     connect(ui->pushButtonO, SIGNAL(clicked()),
             this, SLOT(pushButtonO_clicked())
             );
-    ui->pushButtonO->setEnabled(false);
+    this->show();
+    // по умолчанию у людей крестики ходят первыми
+    if (mode == Mode::PlayWithHuman)
+        ui->pushButtonO->setEnabled(false);
+    else // если играем с компом, то нужно организовать выбор, ходить первым или нет
+    {
+        setFirstMoveMode();
+    }
+}
+//=======================================================================
+void MainWindow::setFirstMoveMode()
+{
+    QMessageBox::StandardButton reply =
+    QMessageBox::question(this, tr("Крестики-нолики"), tr("Ходить первым?"),
+                                    QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::Yes)
+    {
+        is_first_move_mode = true;
+        ui->pushButtonO->setEnabled(false);
+        // вызвать когда игрок сделает ход:
+        //AIMove();
+    }
+    else
+    {
+        is_first_move_mode = false;
+        AIMove();
+    }
 }
 //=======================================================================
 void MainWindow::pushButtonX_clicked()
@@ -58,6 +86,9 @@ void MainWindow::pushButtonX_clicked()
         QMessageBox::information(this, tr("Крестики-Нолики"),
                                  tr("Победили нолики!"));
         clearField();
+        if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
+                && !is_first_move_mode)
+            continuePlay();
         return;
     }
 
@@ -66,6 +97,9 @@ void MainWindow::pushButtonX_clicked()
         QMessageBox::information(this, tr("Крестики-Нолики"),
                                  tr("Победили крестики!"));
         clearField();
+        if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
+                && !is_first_move_mode)
+            continuePlay();
         return;
     }
     else if (checkField() == -2)
@@ -73,11 +107,29 @@ void MainWindow::pushButtonX_clicked()
         QMessageBox::information(this, tr("Крестики-Нолики"),
                                  tr("Ничья!"));
         clearField();
+        if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
+                && !is_first_move_mode)
+            continuePlay();
         return;
     }
 
+    // если играем с компьютером, и ходим первыми, после нашего хода ходит компьютер
+    if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
+            && is_first_move_mode)
+        AIMove();
+
+    if (mode == Mode::PlayWithHuman)
+    {
+        ui->pushButtonX->setEnabled(false);
+        ui->pushButtonO->setEnabled(true);
+    }
+}
+//=======================================================================
+void MainWindow::continuePlay()
+{
     ui->pushButtonX->setEnabled(false);
     ui->pushButtonO->setEnabled(true);
+    AIMove();
 }
 //=======================================================================
 QVector<QPushButton*> MainWindow::getButtons() const
@@ -125,6 +177,9 @@ void MainWindow::pushButtonO_clicked()
         QMessageBox::information(this, tr("Крестики-Нолики"),
                              tr("Победили нолики!"));
         clearField();
+        if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
+                && !is_first_move_mode)
+            continuePlay();
         return;
     }
 
@@ -133,6 +188,9 @@ void MainWindow::pushButtonO_clicked()
         QMessageBox::information(this, tr("Крестики-Нолики"),
                              tr("Победили крестики!"));
         clearField();
+        if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
+                && !is_first_move_mode)
+            continuePlay();
         return;
     }
     else if (checkField() == -2)
@@ -140,10 +198,23 @@ void MainWindow::pushButtonO_clicked()
         QMessageBox::information(this, tr("Крестики-Нолики"),
                                  tr("Ничья!"));
         clearField();
+        if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
+                && !is_first_move_mode)
+            continuePlay();
         return;
     }
-    ui->pushButtonO->setEnabled(false);
-    ui->pushButtonX->setEnabled(true);
+
+    // если играем с компьютером, и ходим вторыми, после нашего хода ходит компьютер
+    if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
+            && !is_first_move_mode)
+        AIMove();
+
+    if (mode == Mode::PlayWithHuman)
+    {
+        ui->pushButtonO->setEnabled(false);
+        ui->pushButtonX->setEnabled(true);
+    }
+
 }
 //=======================================================================
 int8_t MainWindow::getChosenButton() const
@@ -151,7 +222,7 @@ int8_t MainWindow::getChosenButton() const
     QVector<QPushButton*> buttons = getButtons();
     int8_t chosen_button_num = 0;
     bool some_button_checked = false;
-    for (const QPushButton* current : buttons)
+    foreach (const QPushButton* current, buttons)
     {
         if (current->isChecked())
         {
@@ -174,7 +245,7 @@ int8_t MainWindow::checkField() const
     // если все ячейки заполнены, но победителя нет, то пишем о
     // ничье
     bool have_empty_cells = false;
-    for (const QPushButton* current : buttons)
+    foreach (const QPushButton* current, buttons)
     {
         if (current->text() != 'O' && current->text() != 'X')
             have_empty_cells = true;
@@ -211,15 +282,79 @@ int8_t MainWindow::checkField() const
         return 0;
 }
 //=======================================================================
+void MainWindow::AIMove()
+{
+
+    if (mode == Mode::PlayWithEasyCPU)
+    {
+        ui->pushButtonO->setEnabled(false);
+        ui->pushButtonX->setEnabled(false);
+        srand(time(nullptr));
+        bool is_find_free_cell = false;
+        int8_t cell = 0;
+        while (!is_find_free_cell)
+        {
+            ui->statusbar->showMessage(tr("Компьютер думает..."), 2000);
+            cell = rand() % 9;
+            // проверяем свободна ли ячейка
+            if (field[cell] != 'X' && field[cell] != 'O')
+                is_find_free_cell = true;
+        }
+
+        // когда нашли свободную ячейку, вызываем соответсвующий метод
+        AIMakingMove(cell);
+    }
+
+    // TODO:
+    // если компьютер ходит первым
+    /*if (!is_first_move_mode && mode == Mode::PlayWithHardCPU)
+    {
+        if (mode == Mode::PlayWithHardCPU)
+        {
+
+        }
+    }
+    else if ((is_first_move_mode && mode == Mode::PlayWithHardCPU))
+    {
+
+    }*/
+}
+//=======================================================================
+void MainWindow::AIMakingMove(int8_t cell)
+{
+    QVector<QPushButton*> buttons = getButtons();
+    buttons[cell]->setChecked(true);
+
+    // Если игрок ходит вторым, компьютер нажимает на X
+    if (!is_first_move_mode)
+    {
+        ui->pushButtonO->setEnabled(true);
+        ui->pushButtonX->setEnabled(false);
+        pushButtonX_clicked();
+    }
+    else
+    {
+        ui->pushButtonO->setEnabled(false);
+        ui->pushButtonX->setEnabled(true);
+        pushButtonO_clicked();
+    }
+}
+//=======================================================================
 void MainWindow::clearField()
 {
     for (int8_t i = 0; i < 9; ++i)
         field[i] = 0;
     QVector<QPushButton*> buttons = getButtons();
-    for (QPushButton* current : buttons)
+    foreach (QPushButton* current, buttons)
         current->setText("");
     ui->pushButtonX->setEnabled(true);
     ui->pushButtonO->setEnabled(false);
+}
+//=======================================================================
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    emit MainWindowClosed();
+    event->accept();
 }
 //=======================================================================
 MainWindow::~MainWindow()
