@@ -2,6 +2,7 @@
 #include "ui_MainWindow.h"
 #include <QMessageBox>
 #include <QCloseEvent>
+#include <QThread>
 //=======================================================================
 MainWindow::MainWindow(Mode mode, QWidget* parent)
     : QMainWindow(parent),
@@ -292,14 +293,16 @@ void MainWindow::AIMove()
         srand(time(nullptr));
         bool is_find_free_cell = false;
         int8_t cell = 0;
+        ui->statusbar->showMessage(tr("Компьютер думает..."));
+
         while (!is_find_free_cell)
         {
-            ui->statusbar->showMessage(tr("Компьютер думает..."), 2000);
             cell = rand() % 9;
             // проверяем свободна ли ячейка
             if (field[cell] != 'X' && field[cell] != 'O')
                 is_find_free_cell = true;
         }
+        ui->statusbar->clearMessage();
 
         // когда нашли свободную ячейку, вызываем соответсвующий метод
         AIMakingMove(cell);
@@ -309,10 +312,7 @@ void MainWindow::AIMove()
     // если компьютер ходит первым
     /*if (!is_first_move_mode && mode == Mode::PlayWithHardCPU)
     {
-        if (mode == Mode::PlayWithHardCPU)
-        {
 
-        }
     }
     else if ((is_first_move_mode && mode == Mode::PlayWithHardCPU))
     {
