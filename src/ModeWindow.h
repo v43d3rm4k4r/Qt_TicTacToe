@@ -6,14 +6,14 @@
 #include <QLabel>
 #include <QVBoxLayout>
 
-
+//=======================================================================
 enum class Mode
 {
     PlayWithHuman,
     PlayWithEasyCPU,
     PlayWithHardCPU
 };
-
+//=======================================================================
 class ModeWindow : public QFrame
 {
     Q_OBJECT
@@ -34,6 +34,7 @@ private slots:
     void pushButtonPlayWithEasyCPU_clicked();
     void pushButtonPlayWithHardCPU_clicked();
     void createMainWindow(Mode mode);
+
 public slots:
     void showModeWindow();
 };

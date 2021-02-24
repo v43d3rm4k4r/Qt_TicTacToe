@@ -53,6 +53,7 @@ void ModeWindow::createMainWindow(Mode mode)
             this, SLOT(showModeWindow())
             );
     main_window->show();
+
     hide();
 }
 //=======================================================================

@@ -27,6 +27,8 @@ HEADERS += \
 FORMS += \
     MainWindow.ui
 
+win32:RC_ICONS += ../images/TicTacToeLabel.ico
+
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin

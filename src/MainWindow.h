@@ -6,8 +6,6 @@
 
 #include "ModeWindow.h"
 
-typedef bool boobs;
-
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -23,7 +21,7 @@ public:
 private:
     Ui::MainWindow* ui;
     Mode mode;
-    boobs is_first_move_mode;
+    bool is_first_move_mode;
     char field[9];
     void setFirstMoveMode();
     QVector<QPushButton*> getButtons() const;
