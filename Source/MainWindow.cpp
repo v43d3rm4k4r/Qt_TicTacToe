@@ -1,8 +1,9 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
+#include <QVector>
+#include <QPushButton>
 #include <QMessageBox>
 #include <QCloseEvent>
-#include <QThread>
 //=======================================================================
 MainWindow::MainWindow(Mode mode, QWidget* parent)
     : QMainWindow(parent),
@@ -10,7 +11,7 @@ MainWindow::MainWindow(Mode mode, QWidget* parent)
     mode{mode}
 {
     ui->setupUi(this);
-    setWindowTitle("Крестики-Нолики");
+    setWindowTitle(tr("Крестики-Нолики"));
     connect(ui->pushButtonX, SIGNAL(clicked()),
             this, SLOT(pushButtonX_clicked())
             );
@@ -22,9 +23,7 @@ MainWindow::MainWindow(Mode mode, QWidget* parent)
     if (mode == Mode::PlayWithHuman)
         ui->pushButtonO->setEnabled(false);
     else // если играем с компом, то нужно организовать выбор, ходить первым или нет
-    {
         setFirstMoveMode();
-    }
 }
 //=======================================================================
 void MainWindow::setFirstMoveMode()

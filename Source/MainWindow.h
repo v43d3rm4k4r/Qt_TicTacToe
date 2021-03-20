@@ -1,8 +1,8 @@
 #pragma once
 
 #include <QMainWindow>
-#include <QVector>
-#include <QPushButton>
+
+
 
 #include "ModeWindow.h"
 

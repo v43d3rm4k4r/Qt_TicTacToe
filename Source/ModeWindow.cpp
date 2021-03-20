@@ -1,49 +1,108 @@
 #include "ModeWindow.h"
 #include "MainWindow.h"
 
+#include <QRadioButton>
+#include <QPushButton>
+#include <QSpacerItem>
+#include <QLabel>
+#include <QVBoxLayout>
+#include <QLineEdit>
+#include <QMessageBox>
+
 //=======================================================================
 ModeWindow::ModeWindow(QWidget* parent)
     : QFrame(parent)
 {
+    labelChooseMode = new QLabel(tr("Выберите режим:"), this);
+    radioButtonPlayWithHuman = new QRadioButton(tr("Игра с человеком"), this);
+    radioButtonPlayWithEasyCPU = new QRadioButton(tr("Игра с компьютером (просто)"), this);
+    radioButtonPlayWithHardCPU = new QRadioButton(tr("Игра с компьютером (сложно)"), this);
+    radioButtonPlayWithHumanHost = new QRadioButton(tr("Игра по сети (создать игру)"), this);
+    radioButtonPlayWithHumanJoin = new QRadioButton(tr("Игра по сети (подключиться к игре)"), this);
+
+    labelIPAddress = new QLabel(tr("IP-Адрес:"), this);
+    lineIPAddress = new QLineEdit(this);
+    labelPort = new QLabel(tr("Адрес порта:"), this);
+    linePort = new QLineEdit(this);
+    pushButtonStart = new QPushButton(tr("Начать"), this);
     spacer = new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
-    labelChooseMode = new QLabel("Выберите режим:");
-    pushButtonPlayWithHuman = new QPushButton("Игра с человеком");
-    pushButtonPlayWithEasyCPU = new QPushButton("Игра с компьютером (просто)");
-    pushButtonPlayWithHardCPU = new QPushButton("Игра с компьютером (сложно)");
+
     vBoxLayout = new QVBoxLayout(this);
 
-    vBoxLayout->addItem(spacer);
     vBoxLayout->addWidget(labelChooseMode);
-    vBoxLayout->addWidget(pushButtonPlayWithHuman);
-    vBoxLayout->addWidget(pushButtonPlayWithEasyCPU);
-    vBoxLayout->addWidget(pushButtonPlayWithHardCPU);
+    vBoxLayout->addWidget(radioButtonPlayWithHuman);
+    vBoxLayout->addWidget(radioButtonPlayWithEasyCPU);
+    vBoxLayout->addWidget(radioButtonPlayWithHardCPU);
+    vBoxLayout->addWidget(radioButtonPlayWithHumanHost);
+    vBoxLayout->addWidget(radioButtonPlayWithHumanJoin);
 
-    setFixedSize(350, 120);
+    vBoxLayout->addWidget(labelIPAddress);
+    vBoxLayout->addWidget(lineIPAddress);
+    vBoxLayout->addWidget(labelPort);
+    vBoxLayout->addWidget(linePort);
+    vBoxLayout->addWidget(pushButtonStart);
+    vBoxLayout->addItem(spacer);
 
-    connect(pushButtonPlayWithHuman, SIGNAL(clicked()),
-            this, SLOT(pushButtonPlayWithHuman_clicked())
+
+    labelIPAddress->hide();
+    lineIPAddress->hide();
+    labelPort->hide();
+    linePort->hide();
+
+    setMinimumSize(350, 180);
+
+    connect(pushButtonStart, SIGNAL(clicked()),
+            this, SLOT(pushButtonStart_clicked())
             );
-    connect(pushButtonPlayWithEasyCPU, SIGNAL(clicked()),
-            this, SLOT(pushButtonPlayWithEasyCPU_clicked())
-            );
-    connect(pushButtonPlayWithHardCPU, SIGNAL(clicked()),
-            this, SLOT(pushButtonPlayWithHardCPU_clicked())
+    connect(radioButtonPlayWithHumanJoin, SIGNAL(toggled(bool)),
+            this, SLOT(radioButtonPlayWithHumanJoin_toggled(bool))
             );
 }
 //=======================================================================
-void ModeWindow::pushButtonPlayWithHuman_clicked()
+void ModeWindow::radioButtonPlayWithHumanJoin_toggled(bool is_checked)
 {
-    createMainWindow(Mode::PlayWithHuman);
+    if (is_checked)
+    {
+        //spacer->changeSize();
+        setFixedSize(350, 270);
+        labelIPAddress->show();
+        lineIPAddress->show();
+        labelPort->show();
+        linePort->show();
+    }
+    else
+    {
+        setFixedSize(350, 180);
+        labelIPAddress->hide();
+        lineIPAddress->hide();
+        labelPort->hide();
+        linePort->hide();
+    }
 }
 //=======================================================================
-void ModeWindow::pushButtonPlayWithEasyCPU_clicked()
+void ModeWindow::pushButtonStart_clicked()
 {
-    createMainWindow(Mode::PlayWithEasyCPU);
-}
-//=======================================================================
-void ModeWindow::pushButtonPlayWithHardCPU_clicked()
-{
-    createMainWindow(Mode::PlayWithHardCPU);
+    if (radioButtonPlayWithHuman->isChecked())
+        createMainWindow(Mode::PlayWithHuman);
+    else if (radioButtonPlayWithEasyCPU->isChecked())
+        createMainWindow(Mode::PlayWithEasyCPU);
+    else if (radioButtonPlayWithHardCPU->isChecked())
+        createMainWindow(Mode::PlayWithHardCPU);
+
+    else if (radioButtonPlayWithHumanHost->isChecked())
+        createMainWindow(Mode::PlayWithHumanHost); // TODO: wait for join etc.
+    else if (radioButtonPlayWithHumanJoin->isChecked())
+    {
+        // ip and port checking, trying to join
+        if (lineIPAddress->text().isEmpty() || linePort->text().isEmpty())
+        {
+            QMessageBox::information(this, tr("Крестики-нолики"),
+                                     tr("Введите IP-адрес и порт игрока."));
+        }
+
+
+
+    }
 }
 //=======================================================================
 void ModeWindow::createMainWindow(Mode mode)
