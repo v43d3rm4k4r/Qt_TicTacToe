@@ -15,7 +15,7 @@ class ClientServer : public QObject
     Q_OBJECT
 
     QUdpSocket* _socket;
-    QHostAddress* _opponent_address;
+    QHostAddress _opponent_address;
     uint16_t _opponent_port;
 
 public:
@@ -32,4 +32,5 @@ public slots:
 
 signals:
     void signalOpponentJoined();
+    void signalHostReadyToStart();
 };

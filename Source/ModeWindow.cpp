@@ -13,7 +13,9 @@
 #include <QTimer>
 #include <QNetworkInterface>
 
-#define DEFAULT_PORT 2424
+#define DEFAULT_PORT 2424u
+
+QHostAddress add;
 
 //=======================================================================
 ModeWindow::ModeWindow(QWidget* parent)
@@ -97,8 +99,12 @@ void ModeWindow::pushButtonStart_clicked()
 
     else if (radioButtonPlayWithHumanHost->isChecked())
     {
+        // if user choose join, than host, or vice versa
+        if (client_server != nullptr)
+            delete client_server;
+
         // позже нужно будет записать IP и порт подключившегося
-        client_server = new ClientServer(QHostAddress::LocalHost, DEFAULT_PORT,
+        client_server = new ClientServer(add /*QHostAddress::LocalHost*/, DEFAULT_PORT,
                                          QUdpSocket::DefaultForPlatform, this);
 
         // когда получаем специальную датаграмму - начинаем игру
@@ -116,6 +122,13 @@ void ModeWindow::pushButtonStart_clicked()
 
     else if (radioButtonPlayWithHumanJoin->isChecked())
     {
+        if (client_server != nullptr)
+            delete client_server;
+        pushButtonStart->setText(tr("Начать"));
+        pushButtonStart->setEnabled(true);
+
+        client_server = new ClientServer(add /*QHostAddress::LocalHost*/, DEFAULT_PORT,
+                                         QUdpSocket::DefaultForPlatform, this);
         // ip and port checking, trying to join
         if (lineIPAddress->text().isEmpty() || linePort->text().isEmpty())
         {
@@ -128,6 +141,9 @@ void ModeWindow::pushButtonStart_clicked()
         // ожидать ответ "go"
         client_server->sendDatagram("readytostart", QHostAddress(lineIPAddress->text()),
                                     linePort->text().toUInt());
+        connect(client_server, SIGNAL(signalHostReadyToStart()),
+                this, SLOT(startGameAsJoin())
+                );
     }
 }
 //=======================================================================
@@ -147,6 +163,11 @@ void ModeWindow::startGameAsHost()
     client_server->sendDatagram("go", client_server->opponentAddress(),
                                 client_server->opponentPort());  // sending "go" answer
     createMainWindow(Mode::PlayWithHumanHost, client_server);
+}
+//=======================================================================
+void ModeWindow::startGameAsJoin()
+{
+    createMainWindow(Mode::PlayWithHumanJoin, client_server);
 }
 //=======================================================================
 void ModeWindow::showModeWindow()
@@ -186,11 +207,12 @@ void ModeWindow::waitingForOpponent()
         const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
         foreach (const QHostAddress &address, QNetworkInterface::allAddresses())
         {
-            if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost)
+            if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost){
                 radioButtonPlayWithHumanHost->setText(tr(QString("Игра по сети (создать игру) [ваш IP: %1][ваш порт: %2]")
                                               .arg(address.toString(), 0, 10).arg(DEFAULT_PORT, 0, 10)
                                                          .toStdString().c_str()
                                               ));
+            add = address;}
         }
 
         ++call;

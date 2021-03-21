@@ -58,6 +58,7 @@ private slots:
     void pushButtonStart_clicked();
     void radioButtonPlayWithHumanJoin_toggled(bool is_checked);
     void startGameAsHost();
+    void startGameAsJoin();
     void createMainWindow(Mode mode, ClientServer* client_server = nullptr);
     void waitingForOpponent();
 
