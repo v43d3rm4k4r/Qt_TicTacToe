@@ -1,8 +1,7 @@
 #pragma once
 
+#include "ClientServer.h"
 #include <QFrame>
-#include <QObject>
-#include <cstdint>
 
 class QSpacerItem;
 class QLabel;
@@ -26,7 +25,7 @@ class ModeWindow : public QFrame
     Q_OBJECT
 
 public:
-    ModeWindow(QWidget* parent = nullptr);
+    explicit ModeWindow(QWidget* parent = nullptr);
     ~ModeWindow();
 
 private:
@@ -47,10 +46,20 @@ private:
     QPushButton* pushButtonStart               = nullptr;
     QVBoxLayout* vBoxLayout                    = nullptr;
 
+    ClientServer* client_server                = nullptr;
+    bool opponent_joined                       = false;
+    bool esc_pressed                           = false;
+    QTimer* timer                              = nullptr;
+
+protected:
+    virtual void keyPressEvent(QKeyEvent* event) override;
+
 private slots:
     void pushButtonStart_clicked();
     void radioButtonPlayWithHumanJoin_toggled(bool is_checked);
-    void createMainWindow(Mode mode);
+    void startGameAsHost();
+    void createMainWindow(Mode mode, ClientServer* client_server = nullptr);
+    void waitingForOpponent();
 
 public slots:
     void showModeWindow();

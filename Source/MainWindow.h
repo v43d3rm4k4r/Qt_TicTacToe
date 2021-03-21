@@ -15,7 +15,8 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(Mode mode, QWidget* parent = nullptr);
+    explicit MainWindow(Mode mode, ClientServer* client_server = nullptr,
+                        QWidget* parent = nullptr);
     ~MainWindow();
 
 private:

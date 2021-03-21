@@ -5,7 +5,7 @@
 #include <QMessageBox>
 #include <QCloseEvent>
 //=======================================================================
-MainWindow::MainWindow(Mode mode, QWidget* parent)
+MainWindow::MainWindow(Mode mode, ClientServer* client_server, QWidget* parent)
     : QMainWindow(parent),
     ui(new Ui::MainWindow),
     mode{mode}
