@@ -8,3 +8,4 @@ Implemented features:
 
 # Current problems/bugs/imperfections:  
 - no hard AI versus mode;
+- game via network is in process at the moment;
