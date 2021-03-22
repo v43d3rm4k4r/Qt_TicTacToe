@@ -4,11 +4,15 @@
 #include <QPushButton>
 #include <QMessageBox>
 #include <QCloseEvent>
+
+// TODO: в сетевом режиме добавить сообщение о том, что противник думает
+
 //=======================================================================
 MainWindow::MainWindow(Mode mode, ClientServer* client_server, QWidget* parent)
     : QMainWindow(parent),
     ui(new Ui::MainWindow),
-    mode{mode}
+    mode{mode},
+    client_server{client_server}
 {
     ui->setupUi(this);
     setWindowTitle(tr("Крестики-Нолики"));
@@ -18,12 +22,38 @@ MainWindow::MainWindow(Mode mode, ClientServer* client_server, QWidget* parent)
     connect(ui->pushButtonO, SIGNAL(clicked()),
             this, SLOT(pushButtonO_clicked())
             );
+    if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanJoin)
+    {
+        connect(client_server, SIGNAL(signalOpponentMoveNumReceived(int8_t)),
+                this, SLOT(opponentMoveNumReceived(int8_t))
+                );
+    }
+
     this->show();
-    // по умолчанию у людей крестики ходят первыми
-    if (mode == Mode::PlayWithHuman)
+
+    /// primary field settings depending on game mode:
+
+    // по умолчанию у людей крестики ходят первыми, а также в случае, если игра по сети,
+    // первым ходит хост
+    if (mode == Mode::PlayWithHuman || mode == Mode::PlayWithHumanHost)
+    {
         ui->pushButtonO->setEnabled(false);
-    else // если играем с компом, то нужно организовать выбор, ходить первым или нет
+        if (mode == Mode::PlayWithHumanHost)
+            state = NetworkGameState::MakingMove;
+    }
+
+    if (mode == Mode::PlayWithHumanJoin)
+    {
+        state = NetworkGameState::WaitingForOpponent;
+        ui->pushButtonX->setEnabled(false);
+        ui->pushButtonO->setEnabled(false);
+    }
+
+    // если играем с компом, то нужно организовать выбор, ходить первым или нет
+    if (mode == Mode::PlayWithEasyCPU || mode == Mode::PlayWithHardCPU)
         setFirstMoveMode();
+
+
 }
 //=======================================================================
 void MainWindow::setFirstMoveMode()
@@ -76,9 +106,16 @@ void MainWindow::pushButtonX_clicked()
     font.setPointSize(70);
     buttons[chosen_button_num]->setFont(font);
     buttons[chosen_button_num]->setText("X");
-
+    qDebug() << "В джоине дошли до покраски";
     // меняем модель поля
     field[chosen_button_num] = 'X';
+
+    // если играем по сети, отправляем номер ячейки, но только в случае, если не зашли в
+    // метод для отображения хода противника - в этом случае не нужно ничего отправлять
+    if ((mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanJoin)
+            && state != NetworkGameState::WaitingForOpponent)
+    client_server->sendDatagram(':' + QString::number(chosen_button_num), client_server->opponentAddress(),
+                                client_server->opponentPort());
 
     // после чего проверям обстановку на поле
     if (checkField() == 1)
@@ -89,6 +126,8 @@ void MainWindow::pushButtonX_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
+        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
+            continueNetworkPlay(mode);
         return;
     }
 
@@ -100,6 +139,8 @@ void MainWindow::pushButtonX_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
+        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
+            continueNetworkPlay(mode);
         return;
     }
     else if (checkField() == -2)
@@ -110,6 +151,8 @@ void MainWindow::pushButtonX_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
+        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
+            continueNetworkPlay(mode);
         return;
     }
 
@@ -123,6 +166,12 @@ void MainWindow::pushButtonX_clicked()
         ui->pushButtonX->setEnabled(false);
         ui->pushButtonO->setEnabled(true);
     }
+
+    if (mode == Mode::PlayWithHumanHost)
+    {
+        ui->pushButtonX->setEnabled(false);
+        state = NetworkGameState::WaitingForOpponent;
+    }
 }
 //=======================================================================
 void MainWindow::continuePlay()
@@ -130,6 +179,21 @@ void MainWindow::continuePlay()
     ui->pushButtonX->setEnabled(false);
     ui->pushButtonO->setEnabled(true);
     AIMove();
+}
+//=======================================================================
+void MainWindow::continueNetworkPlay(Mode mode)
+{
+    if (mode == Mode::PlayWithHumanHost)
+    {
+        ui->pushButtonX->setEnabled(true);
+        ui->pushButtonO->setEnabled(false);
+    }
+    else if (mode == Mode::PlayWithHumanJoin)
+    {
+        ui->pushButtonX->setEnabled(false);
+        ui->pushButtonO->setEnabled(false);
+    }
+    state = NetworkGameState::GameOver;
 }
 //=======================================================================
 QVector<QPushButton*> MainWindow::getButtons() const
@@ -172,6 +236,13 @@ void MainWindow::pushButtonO_clicked()
 
     field[chosen_button_num] = 'O';
 
+    // если играем по сети, отправляем номер ячейки, но только в случае, если не зашли в
+    // метод для отображения хода противника - в этом случае не нужно ничего отправлять
+    if ((mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanJoin)
+            && state != NetworkGameState::WaitingForOpponent)
+    client_server->sendDatagram(':' + QString::number(chosen_button_num), client_server->opponentAddress(),
+                                client_server->opponentPort());
+
     if (checkField() == 1)
     {
         QMessageBox::information(this, tr("Крестики-Нолики"),
@@ -180,6 +251,8 @@ void MainWindow::pushButtonO_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
+        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
+            continueNetworkPlay(mode);
         return;
     }
 
@@ -191,6 +264,8 @@ void MainWindow::pushButtonO_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
+        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
+            continueNetworkPlay(mode);
         return;
     }
     else if (checkField() == -2)
@@ -201,6 +276,8 @@ void MainWindow::pushButtonO_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
+        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
+            continueNetworkPlay(mode);
         return;
     }
 
@@ -215,6 +292,11 @@ void MainWindow::pushButtonO_clicked()
         ui->pushButtonX->setEnabled(true);
     }
 
+    if (mode == Mode::PlayWithHumanJoin)
+    {
+        ui->pushButtonO->setEnabled(false);
+        state = NetworkGameState::WaitingForOpponent;
+    }
 }
 //=======================================================================
 int8_t MainWindow::getChosenButton() const
@@ -236,6 +318,60 @@ int8_t MainWindow::getChosenButton() const
         return -1;
     }
     return chosen_button_num;
+}
+//=======================================================================
+void MainWindow::opponentMoveNumReceived(int8_t cell)
+{
+    /*// Здесь нужно проигнорить (обработать) последний сигнал от оппонента,
+    // когда итак известно чем закончилась игра!
+    if (state == NetworkGameState::GameOver)
+    {
+        if (mode == Mode::PlayWithHumanJoin)
+            state = NetworkGameState::WaitingForOpponent;
+        else
+            state = NetworkGameState::MakingMove;
+        return;
+    }*/
+
+    // выделить соответствующую ячейку
+    QVector<QPushButton*> buttons = getButtons();
+    buttons[cell]->setChecked(true);
+
+    // вызвать метод в зависимости от того, кто играет,
+    // если играет хост, то вызвать нажатие О, и наоборот
+    // в конце разблокировать кнопку в зависимости от хоста или джоина
+    if (mode == Mode::PlayWithHumanJoin)
+    {
+        pushButtonX_clicked(); // отображаем ход противника
+        // если при отображении хода противника игра закончилась
+        // (state == GameOver), то меняем state в зависимости
+        // от хоста/джоина и выходим отсюда, чтобы не менять кнопки,
+        // т.к. они уже изменены методом continueNetworkPlay()
+        if (state == NetworkGameState::GameOver)
+        {
+            qDebug() << "Джойн пришёл в геймовер";
+            state = NetworkGameState::WaitingForOpponent;
+            return;
+        }
+
+        ui->pushButtonO->setEnabled(true);
+        state = NetworkGameState::MakingMove;
+    }
+
+    else if (mode == Mode::PlayWithHumanHost)
+    {
+        pushButtonO_clicked(); // отображаем ход противника
+        // то же самое - если при ходе оппонента произошла
+        // ничья или вы проиграли - выходим
+        if (state == NetworkGameState::GameOver)
+        {
+            state = NetworkGameState::MakingMove;
+            return;
+        }
+
+        ui->pushButtonX->setEnabled(true);
+        state = NetworkGameState::MakingMove;
+    }
 }
 //=======================================================================
 int8_t MainWindow::checkField() const

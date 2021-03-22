@@ -4,10 +4,11 @@
 #include <QUdpSocket>
 #include <cstdint>
 //=======================================================================
-enum class GameState : uint8_t
+enum class NetworkGameState : uint8_t
 {
-    WaitingForOpponent
-
+    WaitingForOpponent,
+    MakingMove,
+    GameOver
 };
 //=======================================================================
 class ClientServer : public QObject
@@ -33,4 +34,5 @@ public slots:
 signals:
     void signalOpponentJoined();
     void signalHostReadyToStart();
+    void signalOpponentMoveNumReceived(int8_t);
 };

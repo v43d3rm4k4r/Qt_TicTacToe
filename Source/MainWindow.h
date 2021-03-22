@@ -2,8 +2,6 @@
 
 #include <QMainWindow>
 
-
-
 #include "ModeWindow.h"
 
 QT_BEGIN_NAMESPACE
@@ -22,6 +20,8 @@ public:
 private:
     Ui::MainWindow* ui;
     Mode mode;
+    ClientServer* client_server;
+    NetworkGameState state;
     bool is_first_move_mode;
     char field[9];
     void setFirstMoveMode();
@@ -32,10 +32,12 @@ private:
     void AIMove();
     void AIMakingMove(int8_t cell);
     void continuePlay();
+    void continueNetworkPlay(Mode mode);
 
 private slots:
     void pushButtonX_clicked();
     void pushButtonO_clicked();
+    void opponentMoveNumReceived(int8_t cell);
 
 protected:
     void closeEvent(QCloseEvent* event) override;

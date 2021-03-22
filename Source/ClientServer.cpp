@@ -1,6 +1,7 @@
 #include "ClientServer.h"
 #include <iostream>
 #include <QNetworkDatagram>
+#include <cctype>
 //=======================================================================
 ClientServer::ClientServer(const QHostAddress& address, quint16 port,
                       QUdpSocket::BindMode mode, QObject* parent)
@@ -19,9 +20,9 @@ void ClientServer::sendDatagram(const QString& msg, const QHostAddress& address,
     QByteArray data;
     data.append(msg.toUtf8());
     _socket->writeDatagram(data, address, port);
-    std::cout << "Message to " << address.toString().toStdString() << std::endl;
-    std::cout << "Receiver`s port is " << port << std::endl;
-    std::cout << "Message: " << data.toStdString() << std::endl;
+    qDebug() << "Message to " << address.toString();
+    qDebug() << "Receiver`s port is " << port;
+    qDebug() << "Message: " << data;
 }
 //=======================================================================
 void ClientServer::slotReadyRead()
@@ -39,26 +40,38 @@ void ClientServer::slotReadyRead()
 
     _opponent_address = datagram.senderAddress();
     _opponent_port = datagram.senderPort();
-    std::cout << "_opponent_address == " << _opponent_address.toIPv4Address() << std::endl;
-    std::cout << "_opponent_port == " << _opponent_port << std::endl;
+    qDebug() << "_opponent_address == " << _opponent_address.toIPv4Address();
+    qDebug() << "_opponent_port == " << _opponent_port;
 
+    // for host
     if (datagram.data() == "readytostart")
     {
         qDebug() << "emit signalOpponentJoined()";
         emit signalOpponentJoined();
     }
 
+    // for join
     if (datagram.data() == "go")
     {
         qDebug() << "emit signalHostReadyToStart()";
         emit signalHostReadyToStart();
     }
 
+    if (datagram.data().contains(':') && isdigit(datagram.data().at(1))
+            && datagram.data().size() == 2)
+    {
+        qDebug() << "emit signalOpponentMoveNumReceived()";
+        char str[2];
+        str[0] = datagram.data().at(1); str[1] = '\0';
+        int8_t num = atoi(str);
+        emit signalOpponentMoveNumReceived(num);
+    }
 
-    // 192.168.1.41
+
     if (!_opponent_address.isNull())
-    qDebug() << "Message from " << _opponent_address.toIPv4Address();
-    else qDebug() << "address = nullptr";
+        qDebug() << "Message from " << _opponent_address.toIPv4Address();
+    else
+        qDebug() << "address = nullptr";
     qDebug() << "Sender`s port is " << _opponent_port;
     qDebug() << "Message: " << datagram.data();
 }

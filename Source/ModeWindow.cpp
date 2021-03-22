@@ -15,7 +15,10 @@
 
 #define DEFAULT_PORT 2424u
 
+// TODO:
+// - метод для получения IPv4 текущего компа
 QHostAddress add;
+// - при создании игры вывести сообщение как отменить ожидание подключения
 
 //=======================================================================
 ModeWindow::ModeWindow(QWidget* parent)
@@ -58,6 +61,8 @@ ModeWindow::ModeWindow(QWidget* parent)
     linePort->hide();
 
     setMinimumSize(390, 180);
+
+    // TODO: get our sIPv4
 
     connect(pushButtonStart, SIGNAL(clicked()),
             this, SLOT(pushButtonStart_clicked())
