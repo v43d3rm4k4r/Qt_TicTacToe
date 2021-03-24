@@ -1,4 +1,4 @@
-# Qt_TicTacToe
+# Qt TicTacToe
 Tic Tac Toe Game, implemented in Qt. The network game is implemented using the UDP protocol. The program combines the properties of both client and server.
 Implemented features:
 - versus human (using one PC);
