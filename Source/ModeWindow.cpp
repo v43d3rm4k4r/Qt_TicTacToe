@@ -13,16 +13,14 @@
 #include <QTimer>
 #include <QNetworkInterface>
 
-#define DEFAULT_PORT 2424u
-
 // TODO:
 // - метод для получения IPv4 текущего компа
 QHostAddress add;
 // - при создании игры вывести сообщение как отменить ожидание подключения
 
 //=======================================================================
-ModeWindow::ModeWindow(QWidget* parent)
-    : QFrame(parent)
+ModeWindow::ModeWindow(QWidget* parent, uint16_t port)
+    : QFrame(parent), port{port}
 {
     labelChooseMode = new QLabel(tr("Выберите режим:"), this);
     radioButtonPlayWithHuman = new QRadioButton(tr("Игра с человеком"), this);
@@ -109,7 +107,7 @@ void ModeWindow::pushButtonStart_clicked()
             delete client_server;
 
         // позже нужно будет записать IP и порт подключившегося
-        client_server = new ClientServer(add /*QHostAddress::LocalHost*/, DEFAULT_PORT,
+        client_server = new ClientServer(add /*QHostAddress::LocalHost*/, port,
                                          QUdpSocket::DefaultForPlatform, this);
 
         // когда получаем специальную датаграмму - начинаем игру
@@ -132,7 +130,7 @@ void ModeWindow::pushButtonStart_clicked()
         pushButtonStart->setText(tr("Начать"));
         pushButtonStart->setEnabled(true);
 
-        client_server = new ClientServer(add /*QHostAddress::LocalHost*/, DEFAULT_PORT,
+        client_server = new ClientServer(add /*QHostAddress::LocalHost*/, port,
                                          QUdpSocket::DefaultForPlatform, this);
         // ip and port checking, trying to join
         if (lineIPAddress->text().isEmpty() || linePort->text().isEmpty())
@@ -214,7 +212,7 @@ void ModeWindow::waitingForOpponent()
         {
             if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost){
                 radioButtonPlayWithHumanHost->setText(tr(QString("Игра по сети (создать игру) [ваш IP: %1][ваш порт: %2]")
-                                              .arg(address.toString(), 0, 10).arg(DEFAULT_PORT, 0, 10)
+                                              .arg(address.toString(), 0, 10).arg(port, 0, 10)
                                                          .toStdString().c_str()
                                               ));
             add = address;}
