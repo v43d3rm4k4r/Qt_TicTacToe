@@ -5,8 +5,6 @@
 #include <QMessageBox>
 #include <QCloseEvent>
 
-// TODO: в сетевом режиме добавить сообщение о том, что противник думает
-
 //=======================================================================
 MainWindow::MainWindow(Mode mode, ClientServer* client_server, QWidget* parent)
     : QMainWindow(parent),

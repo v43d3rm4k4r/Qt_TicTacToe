@@ -44,14 +44,19 @@ private:
     QLineEdit* linePort                        = nullptr;
 
     QPushButton* pushButtonStart               = nullptr;
+    QLabel* labelPushESCToExit                 = nullptr;
     QVBoxLayout* vBoxLayout                    = nullptr;
 
     ClientServer* client_server                = nullptr;
     bool opponent_joined                       = false;
     bool esc_pressed                           = false;
     QTimer* timer                              = nullptr;
+
+    QHostAddress outer_IPv4_address;
     uint16_t port;
 
+    void getOuterIPv4Address();
+    void setAllRadioButtonsEnabled(bool enabled);
 
 protected:
     virtual void keyPressEvent(QKeyEvent* event) override;
