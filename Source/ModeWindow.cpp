@@ -13,16 +13,13 @@
 #include <QTimer>
 #include <QNetworkInterface>
 
-#define DEFAULT_PORT 2424u
-
 // TODO:
-// - метод для получения IPv4 текущего компа
-QHostAddress add;
 // - при создании игры вывести сообщение как отменить ожидание подключения
+// - включить кнопку после отмены ожидания подключения
 
 //=======================================================================
-ModeWindow::ModeWindow(QWidget* parent)
-    : QFrame(parent)
+ModeWindow::ModeWindow(QWidget* parent, uint16_t port)
+    : QFrame(parent), port{port}
 {
     labelChooseMode = new QLabel(tr("Выберите режим:"), this);
     radioButtonPlayWithHuman = new QRadioButton(tr("Игра с человеком"), this);
@@ -36,6 +33,7 @@ ModeWindow::ModeWindow(QWidget* parent)
     labelPort = new QLabel(tr("Адрес порта:"), this);
     linePort = new QLineEdit(this);
     pushButtonStart = new QPushButton(tr("Начать"), this);
+    labelPushESCToExit = new QLabel(tr("Для отмены нажмите ESC"), this);
     spacer = new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
     vBoxLayout = new QVBoxLayout(this);
@@ -52,6 +50,7 @@ ModeWindow::ModeWindow(QWidget* parent)
     vBoxLayout->addWidget(labelPort);
     vBoxLayout->addWidget(linePort);
     vBoxLayout->addWidget(pushButtonStart);
+    vBoxLayout->addWidget(labelPushESCToExit);
     vBoxLayout->addItem(spacer);
 
 
@@ -59,10 +58,11 @@ ModeWindow::ModeWindow(QWidget* parent)
     lineIPAddress->hide();
     labelPort->hide();
     linePort->hide();
+    labelPushESCToExit->hide();
 
     setMinimumSize(390, 180);
 
-    // TODO: get our sIPv4
+    getOuterIPv4Address();
 
     connect(pushButtonStart, SIGNAL(clicked()),
             this, SLOT(pushButtonStart_clicked())
@@ -104,12 +104,17 @@ void ModeWindow::pushButtonStart_clicked()
 
     else if (radioButtonPlayWithHumanHost->isChecked())
     {
+        setAllRadioButtonsEnabled(false);
+        labelPushESCToExit->show();
+        setFixedSize(390, 200);
+
+
         // if user choose join, than host, or vice versa
         if (client_server != nullptr)
             delete client_server;
 
         // позже нужно будет записать IP и порт подключившегося
-        client_server = new ClientServer(add /*QHostAddress::LocalHost*/, DEFAULT_PORT,
+        client_server = new ClientServer(outer_IPv4_address, port,
                                          QUdpSocket::DefaultForPlatform, this);
 
         // когда получаем специальную датаграмму - начинаем игру
@@ -132,7 +137,7 @@ void ModeWindow::pushButtonStart_clicked()
         pushButtonStart->setText(tr("Начать"));
         pushButtonStart->setEnabled(true);
 
-        client_server = new ClientServer(add /*QHostAddress::LocalHost*/, DEFAULT_PORT,
+        client_server = new ClientServer(outer_IPv4_address, port,
                                          QUdpSocket::DefaultForPlatform, this);
         // ip and port checking, trying to join
         if (lineIPAddress->text().isEmpty() || linePort->text().isEmpty())
@@ -199,6 +204,9 @@ void ModeWindow::waitingForOpponent()
         pushButtonStart->setEnabled(true);
         radioButtonPlayWithHumanHost->setText(tr("Игра по сети (создать игру)"));
         opponent_joined = esc_pressed = false;
+        setAllRadioButtonsEnabled(true);
+        labelPushESCToExit->hide();
+        setFixedSize(390, 180);
         call = -1;
         timer->stop();
         delete timer;
@@ -208,18 +216,11 @@ void ModeWindow::waitingForOpponent()
     if (call == -1)
     {
         pushButtonStart->setEnabled(false);
-        // finding out and outputting local_IPv4 address
-        const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
-        foreach (const QHostAddress &address, QNetworkInterface::allAddresses())
-        {
-            if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost){
-                radioButtonPlayWithHumanHost->setText(tr(QString("Игра по сети (создать игру) [ваш IP: %1][ваш порт: %2]")
-                                              .arg(address.toString(), 0, 10).arg(DEFAULT_PORT, 0, 10)
-                                                         .toStdString().c_str()
-                                              ));
-            add = address;}
-        }
 
+        radioButtonPlayWithHumanHost->setText(tr(QString("Игра по сети (создать игру) [ваш IP: %1][ваш порт: %2]")
+                                                     .arg(outer_IPv4_address.toString(), 0, 10).arg(port, 0, 10)
+                                                     .toStdString().c_str()
+                                                 ));
         ++call;
     }
     else if (call == 0)
@@ -237,6 +238,28 @@ void ModeWindow::waitingForOpponent()
         pushButtonStart->setText(tr("Ожидаем оппонента..."));
         call = 0;
     }
+}
+//=======================================================================
+void ModeWindow::getOuterIPv4Address()
+{
+    QHostAddress localhost(QHostAddress::LocalHost);
+    foreach (QHostAddress address, QNetworkInterface::allAddresses())
+    {
+        if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost)
+        {
+            outer_IPv4_address = address;
+            break;
+        }
+    }
+}
+//=======================================================================
+void ModeWindow::setAllRadioButtonsEnabled(bool enabled)
+{
+    radioButtonPlayWithHuman->setEnabled(enabled);
+    radioButtonPlayWithEasyCPU->setEnabled(enabled);
+    radioButtonPlayWithHardCPU->setEnabled(enabled);
+    //radioButtonPlayWithHumanHost->setEnabled(enabled); // not necessary to unable
+    radioButtonPlayWithHumanJoin->setEnabled(enabled);
 }
 //=======================================================================
 ModeWindow::~ModeWindow()

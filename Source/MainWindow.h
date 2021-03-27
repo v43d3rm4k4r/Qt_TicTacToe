@@ -32,7 +32,7 @@ private:
     void AIMove();
     void AIMakingMove(int8_t cell);
     void continuePlay();
-    void continueNetworkPlay(Mode mode);
+    //void continueNetworkPlay(Mode mode);
 
 private slots:
     void pushButtonX_clicked();

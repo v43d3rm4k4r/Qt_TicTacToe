@@ -5,8 +5,6 @@
 #include <QMessageBox>
 #include <QCloseEvent>
 
-// TODO: в сетевом режиме добавить сообщение о том, что противник думает
-
 //=======================================================================
 MainWindow::MainWindow(Mode mode, ClientServer* client_server, QWidget* parent)
     : QMainWindow(parent),
@@ -39,7 +37,10 @@ MainWindow::MainWindow(Mode mode, ClientServer* client_server, QWidget* parent)
     {
         ui->pushButtonO->setEnabled(false);
         if (mode == Mode::PlayWithHumanHost)
+        {
             state = NetworkGameState::MakingMove;
+            ui->statusbar->showMessage(tr("Ваш ход"));
+        }
     }
 
     if (mode == Mode::PlayWithHumanJoin)
@@ -47,6 +48,7 @@ MainWindow::MainWindow(Mode mode, ClientServer* client_server, QWidget* parent)
         state = NetworkGameState::WaitingForOpponent;
         ui->pushButtonX->setEnabled(false);
         ui->pushButtonO->setEnabled(false);
+        ui->statusbar->showMessage(tr("Противник размышляет..."));
     }
 
     // если играем с компом, то нужно организовать выбор, ходить первым или нет
@@ -106,14 +108,15 @@ void MainWindow::pushButtonX_clicked()
     font.setPointSize(70);
     buttons[chosen_button_num]->setFont(font);
     buttons[chosen_button_num]->setText("X");
-    qDebug() << "В джоине дошли до покраски";
+
+
     // меняем модель поля
     field[chosen_button_num] = 'X';
 
     // если играем по сети, отправляем номер ячейки, но только в случае, если не зашли в
     // метод для отображения хода противника - в этом случае не нужно ничего отправлять
     if ((mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanJoin)
-            && state != NetworkGameState::WaitingForOpponent)
+        && state != NetworkGameState::WaitingForOpponent && state != NetworkGameState::GameOver)
     client_server->sendDatagram(':' + QString::number(chosen_button_num), client_server->opponentAddress(),
                                 client_server->opponentPort());
 
@@ -126,8 +129,6 @@ void MainWindow::pushButtonX_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
-        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
-            continueNetworkPlay(mode);
         return;
     }
 
@@ -139,8 +140,6 @@ void MainWindow::pushButtonX_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
-        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
-            continueNetworkPlay(mode);
         return;
     }
     else if (checkField() == -2)
@@ -151,8 +150,8 @@ void MainWindow::pushButtonX_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
-        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
-            continueNetworkPlay(mode);
+        /*if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost)
+            continueNetworkPlay(mode);*/
         return;
     }
 
@@ -167,10 +166,11 @@ void MainWindow::pushButtonX_clicked()
         ui->pushButtonO->setEnabled(true);
     }
 
-    if (mode == Mode::PlayWithHumanHost)
+    if (mode == Mode::PlayWithHumanHost && state != NetworkGameState::GameOver)
     {
         ui->pushButtonX->setEnabled(false);
         state = NetworkGameState::WaitingForOpponent;
+        ui->statusbar->showMessage(tr("Противник размышляет..."));
     }
 }
 //=======================================================================
@@ -180,7 +180,7 @@ void MainWindow::continuePlay()
     ui->pushButtonO->setEnabled(true);
     AIMove();
 }
-//=======================================================================
+/*//=======================================================================
 void MainWindow::continueNetworkPlay(Mode mode)
 {
     if (mode == Mode::PlayWithHumanHost)
@@ -193,9 +193,9 @@ void MainWindow::continueNetworkPlay(Mode mode)
         ui->pushButtonX->setEnabled(false);
         ui->pushButtonO->setEnabled(false);
     }
-    state = NetworkGameState::GameOver;
+    //state = NetworkGameState::GameOver;
 }
-//=======================================================================
+//=======================================================================*/
 QVector<QPushButton*> MainWindow::getButtons() const
 {
     QVector<QPushButton*> vec;
@@ -251,8 +251,8 @@ void MainWindow::pushButtonO_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
-        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
-            continueNetworkPlay(mode);
+        /*if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
+            continueNetworkPlay(mode);*/
         return;
     }
 
@@ -264,8 +264,6 @@ void MainWindow::pushButtonO_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
-        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
-            continueNetworkPlay(mode);
         return;
     }
     else if (checkField() == -2)
@@ -276,8 +274,6 @@ void MainWindow::pushButtonO_clicked()
         if ((mode == Mode::PlayWithHardCPU || mode == Mode::PlayWithEasyCPU)
                 && !is_first_move_mode)
             continuePlay();
-        if (mode == Mode::PlayWithHumanHost || mode == Mode::PlayWithHumanHost )
-            continueNetworkPlay(mode);
         return;
     }
 
@@ -292,10 +288,11 @@ void MainWindow::pushButtonO_clicked()
         ui->pushButtonX->setEnabled(true);
     }
 
-    if (mode == Mode::PlayWithHumanJoin)
+    if (mode == Mode::PlayWithHumanJoin && state != NetworkGameState::GameOver)
     {
         ui->pushButtonO->setEnabled(false);
         state = NetworkGameState::WaitingForOpponent;
+        ui->statusbar->showMessage(tr("Противник размышляет..."));
     }
 }
 //=======================================================================
@@ -322,16 +319,19 @@ int8_t MainWindow::getChosenButton() const
 //=======================================================================
 void MainWindow::opponentMoveNumReceived(int8_t cell)
 {
-    /*// Здесь нужно проигнорить (обработать) последний сигнал от оппонента,
+    ui->statusbar->showMessage(tr("Ваш ход"));
+    // Здесь нужно проигнорить (обработать) последний сигнал от оппонента,
     // когда итак известно чем закончилась игра!
-    if (state == NetworkGameState::GameOver)
-    {
-        if (mode == Mode::PlayWithHumanJoin)
-            state = NetworkGameState::WaitingForOpponent;
-        else
-            state = NetworkGameState::MakingMove;
-        return;
-    }*/
+    if (mode == Mode::PlayWithHumanJoin)
+        field[cell] = 'X';
+    if (mode == Mode::PlayWithHumanHost)
+        field[cell] = 'O';
+
+    // если получаем 1, -1 или -2 - игра окончена
+    if (checkField())
+         state = NetworkGameState::GameOver;
+
+
 
     // выделить соответствующую ячейку
     QVector<QPushButton*> buttons = getButtons();
@@ -349,7 +349,6 @@ void MainWindow::opponentMoveNumReceived(int8_t cell)
         // т.к. они уже изменены методом continueNetworkPlay()
         if (state == NetworkGameState::GameOver)
         {
-            qDebug() << "Джойн пришёл в геймовер";
             state = NetworkGameState::WaitingForOpponent;
             return;
         }
@@ -381,9 +380,9 @@ int8_t MainWindow::checkField() const
     // если все ячейки заполнены, но победителя нет, то пишем о
     // ничье
     bool have_empty_cells = false;
-    foreach (const QPushButton* current, buttons)
+    for (const char& current : field)
     {
-        if (current->text() != 'O' && current->text() != 'X')
+        if (current != 'X' && current != 'O')
             have_empty_cells = true;
     }
     if (!have_empty_cells)
@@ -482,8 +481,27 @@ void MainWindow::clearField()
     QVector<QPushButton*> buttons = getButtons();
     foreach (QPushButton* current, buttons)
         current->setText("");
-    ui->pushButtonX->setEnabled(true);
-    ui->pushButtonO->setEnabled(false);
+    if (mode == Mode::PlayWithHuman || mode == Mode::PlayWithEasyCPU ||
+        mode == Mode::PlayWithHardCPU)
+    {
+        ui->pushButtonX->setEnabled(true);
+        ui->pushButtonO->setEnabled(false);
+    }
+    else // network mode
+    {
+        if (mode == Mode::PlayWithHumanHost)
+        {
+            ui->statusbar->showMessage(tr("Ваш ход"));
+            ui->pushButtonX->setEnabled(true);
+            ui->pushButtonO->setEnabled(false);
+        }
+        else if (mode == Mode::PlayWithHumanJoin)
+        {
+            ui->statusbar->showMessage(tr("Противник размышляет..."));
+            ui->pushButtonX->setEnabled(false);
+            ui->pushButtonO->setEnabled(false);
+        }
+    }
 }
 //=======================================================================
 void MainWindow::closeEvent(QCloseEvent* event)
